@@ -51,6 +51,9 @@ cp -r openclaw-plugin/* ~/.openclaw/extensions/talentos-hiring/
             "talentos_shortlist_candidates",
             "talentos_candidate_timeline",
             "talentos_followups_due",
+            "talentos_referrer_network",
+            "talentos_pipeline_health",
+            "talentos_concern_patterns",
             "group:memory"
           ]
         }
@@ -76,5 +79,8 @@ In your hiring workspace `AGENTS.md`, include a policy like:
 - Use `talentos_shortlist_candidates` for role-level ranking questions.
 - Use `talentos_candidate_timeline` before giving status updates.
 - Before suggesting outreach plans, call `talentos_followups_due`.
+- For “who was referred by X?” use `talentos_referrer_network`.
+- For “pipeline health for role X?” use `talentos_pipeline_health`.
+- For “candidates who expressed concerns about X?” use `talentos_concern_patterns`.
 - Prefer memory-grounded answers; avoid unsupported assumptions.
 

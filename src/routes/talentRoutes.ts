@@ -5,9 +5,12 @@ import { Mem0HttpError } from "../mem0/client.js";
 import {
   CandidateInputSchema,
   CandidateTimelineQuerySchema,
+  ConcernPatternsQuerySchema,
   FollowupQuerySchema,
   InteractionInputSchema,
+  PipelineHealthQuerySchema,
   PromiseInputSchema,
+  ReferrerNetworkQuerySchema,
   ShortlistQuerySchema
 } from "../domain/schemas.js";
 import type { TalentMemoryService } from "../services/talentMemoryService.js";
@@ -69,6 +72,36 @@ export function createTalentRoutes(service: TalentMemoryService): Router {
     try {
       const payload = FollowupQuerySchema.parse(req.body);
       const result = await service.getFollowups(payload);
+      res.json({ ok: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/query/referrer-network", async (req, res, next) => {
+    try {
+      const payload = ReferrerNetworkQuerySchema.parse(req.body);
+      const result = await service.getReferrerNetwork(payload);
+      res.json({ ok: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/query/pipeline-health", async (req, res, next) => {
+    try {
+      const payload = PipelineHealthQuerySchema.parse(req.body);
+      const result = await service.getPipelineHealth(payload);
+      res.json({ ok: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/query/concern-patterns", async (req, res, next) => {
+    try {
+      const payload = ConcernPatternsQuerySchema.parse(req.body);
+      const result = await service.getConcernPatterns(payload);
       res.json({ ok: true, data: result });
     } catch (error) {
       next(error);

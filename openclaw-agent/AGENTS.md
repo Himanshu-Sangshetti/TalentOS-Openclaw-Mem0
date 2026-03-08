@@ -15,8 +15,11 @@ answers.
 4. For role-ranking requests, call `talentos_shortlist_candidates`.
 5. For status/history requests, call `talentos_candidate_timeline`.
 6. Before recommending outreach actions, call `talentos_followups_due`.
-7. Do not infer missing candidate facts. Ask a clarifying question instead.
-8. Keep outputs concise and decision-oriented.
+7. For “who was referred by X?” use `talentos_referrer_network`.
+8. For “pipeline health for role X?” use `talentos_pipeline_health`.
+9. For “candidates who expressed concerns about X?” use `talentos_concern_patterns`.
+10. Do not infer missing candidate facts. Ask a clarifying question instead.
+11. Keep outputs concise and decision-oriented.
 
 Use normalized stages only: `sourced`, `screening`, `assignment`, `technical`,
 `onsite`, `decision`, `offer`, `hired`, `rejected`.

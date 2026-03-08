@@ -81,10 +81,33 @@ export const FollowupQuerySchema = z.object({
   topK: z.number().int().positive().max(100).default(20)
 });
 
+/** Cross-conversation: candidates referred by a specific person */
+export const ReferrerNetworkQuerySchema = z.object({
+  referrerName: nonEmpty,
+  roleTitle: nonEmpty.optional(),
+  topK: z.number().int().positive().max(50).default(15)
+});
+
+/** Cross-conversation: pipeline summary by role (stage counts, active candidates) */
+export const PipelineHealthQuerySchema = z.object({
+  roleTitle: nonEmpty,
+  topK: z.number().int().positive().max(100).default(30)
+});
+
+/** Cross-conversation: candidates who expressed concerns matching a topic */
+export const ConcernPatternsQuerySchema = z.object({
+  concernTopic: nonEmpty,
+  roleTitle: nonEmpty.optional(),
+  topK: z.number().int().positive().max(50).default(15)
+});
+
 export type CandidateInput = z.infer<typeof CandidateInputSchema>;
 export type InteractionInput = z.infer<typeof InteractionInputSchema>;
 export type PromiseInput = z.infer<typeof PromiseInputSchema>;
 export type ShortlistQuery = z.infer<typeof ShortlistQuerySchema>;
 export type CandidateTimelineQuery = z.infer<typeof CandidateTimelineQuerySchema>;
 export type FollowupQuery = z.infer<typeof FollowupQuerySchema>;
+export type ReferrerNetworkQuery = z.infer<typeof ReferrerNetworkQuerySchema>;
+export type PipelineHealthQuery = z.infer<typeof PipelineHealthQuerySchema>;
+export type ConcernPatternsQuery = z.infer<typeof ConcernPatternsQuerySchema>;
 export type HiringStage = z.infer<typeof HiringStageSchema>;

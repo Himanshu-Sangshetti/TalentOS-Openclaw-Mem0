@@ -1,78 +1,67 @@
-# TalentOS for OpenClaw x Mem0
+# TalentOS — Memory-native hiring copilot for OpenClaw × Mem0
 
-TalentOS is a memory-native hiring copilot backend designed for OpenClaw agents.
-It provides production-ready hiring workflows on top of Mem0:
+TalentOS is a **memory-native** hiring copilot: it uses **Mem0** for durable, semantic memory and **OpenClaw** for multi-channel conversation. It goes beyond a CRUD chatbot by using OpenClaw lifecycle hooks for auto-recall and auto-capture, and cross-conversation queries that connect information across sessions.
 
-- Candidate profile capture
-- Interview/interaction logging
+## What makes it memory-native
+
+- **Lifecycle hooks** — Before every turn, relevant hiring context is injected from Mem0 (auto-recall). After every turn, the conversation is sent to Mem0 for fact extraction (auto-capture). The agent doesn’t need to be told “call this tool” for memory to work.
+- **Cross-session persistence** — Restart the gateway or start a new chat; the agent still answers from Mem0. See the [multi-session demo](#multi-session-demo).
+- **Cross-conversation intelligence** — Queries like “who was referred by Ankit?”, “pipeline health for Staff Engineer”, and “candidates who expressed concerns about startup risk” use semantic search over all hiring memory.
+- **Multi-channel** — Same memory across Telegram and Web UI (or any OpenClaw channel). Add a candidate in one, recall in another.
+
+For a full system overview, see **[ARCHITECTURE.md](./ARCHITECTURE.md)**.
+
+## Features
+
+- Candidate profile capture and interaction logging
 - Promise/follow-up tracking
-- Retrieval for shortlists, timelines, and due follow-ups
-
-This project follows official docs and APIs:
-
-- Mem0 Add Memories: `POST /v1/memories/`
-- Mem0 Search Memories v2: `POST /v2/memories/search/`
-- OpenClaw plugin manifest and tool registration model
-
-## Why this exists
-
-OpenClaw gives teams a multi-channel conversational surface. Mem0 gives those
-agents durable memory across sessions. TalentOS adds hiring-domain structure so
-recruiting context does not disappear between chats, interview rounds, and
-handoffs.
-
-## Architecture
-
-1. OpenClaw agent calls TalentOS tools (via plugin) or TalentOS API directly.
-2. TalentOS converts events into structured memory entries and metadata.
-3. TalentOS writes to Mem0 (`/v1/memories/`) and reads using Mem0 v2 filters (`/v2/memories/search/`).
-4. OpenClaw agents retrieve grounded hiring context from Mem0 instead of relying
-   on short-term prompt context.
+- Shortlist, timeline, and due follow-ups
+- **Cross-conversation**: referrer network, pipeline health, concern patterns
+- **OpenClaw plugin** with lifecycle hooks (auto-recall, auto-capture) and optional tools
 
 ## Local setup
 
-### 1) Install dependencies
+### 1. Install dependencies
 
 ```bash
 npm install
 ```
 
-### 2) Configure environment
+### 2. Configure environment
 
-Copy `.env.example` to `.env` and fill values:
+Copy `.env.example` to `.env` and set:
 
-- `MEM0_API_KEY` from Mem0 dashboard
-- optional custom IDs (`TALENTOS_USER_ID`, etc.)
-- optional service auth (`TALENTOS_API_KEY`) if you want API-level bearer protection
+- `MEM0_API_KEY` — from [Mem0](https://mem0.ai) dashboard
+- Optional: `TALENTOS_USER_ID`, `TALENTOS_API_KEY`, etc.
 
-### 3) Start server
+### 3. Start server
 
 ```bash
 npm run dev
 ```
 
-Health check:
+Health check: `GET http://localhost:3010/health`
 
-```bash
-GET http://localhost:3010/health
-```
-
-## API endpoints
+## API
 
 Base: `/api/v1/talent`
 
-- `POST /candidates`
-- `POST /interactions`
-- `POST /promises`
-- `POST /query/shortlist`
-- `POST /query/timeline`
-- `POST /query/followups`
+| Write | Description |
+|-------|-------------|
+| `POST /candidates` | Add or update candidate profile |
+| `POST /interactions` | Log interview/interaction |
+| `POST /promises` | Track follow-up commitment |
 
-If `TALENTOS_API_KEY` is configured, add:
+| Query | Description |
+|-------|-------------|
+| `POST /query/shortlist` | Role shortlist (candidates by role/stage/skills) |
+| `POST /query/timeline` | Candidate timeline (profile + interactions + promises) |
+| `POST /query/followups` | Due follow-ups in date range |
+| `POST /query/referrer-network` | Candidates referred by a person |
+| `POST /query/pipeline-health` | Pipeline summary for a role |
+| `POST /query/concern-patterns` | Candidates who expressed concerns about a topic |
 
-```bash
-Authorization: Bearer <TALENTOS_API_KEY>
-```
+If `TALENTOS_API_KEY` is set, send `Authorization: Bearer <key>`.
 
 ### Example: add candidate
 
@@ -80,44 +69,48 @@ Authorization: Bearer <TALENTOS_API_KEY>
 curl -X POST http://localhost:3010/api/v1/talent/candidates \
   -H "Content-Type: application/json" \
   -d '{
-    "name":"Rohan Gupta",
-    "roleTitle":"Founding AI Engineer",
-    "currentCompany":"Stripe",
-    "location":"Bangalore",
-    "skills":["agents","infra","python"],
-    "referrerName":"Priya"
+    "name": "Rohan Gupta",
+    "roleTitle": "Founding AI Engineer",
+    "currentCompany": "Stripe",
+    "location": "Bangalore",
+    "skills": ["agents", "infra", "python"],
+    "referrerName": "Priya"
   }'
 ```
 
 ## OpenClaw plugin
 
-This repo includes `openclaw-plugin/` with:
+`openclaw-plugin/` provides:
 
-- `openclaw.plugin.json` manifest
-- optional tools:
-  - `talentos_add_candidate`
-  - `talentos_log_interaction`
-  - `talentos_track_promise`
-  - `talentos_shortlist_candidates`
-  - `talentos_candidate_timeline`
-  - `talentos_followups_due`
+- **Lifecycle hooks** (when `mem0ApiKey` is set):
+  - `before_prompt_build` — inject relevant hiring memory (auto-recall)
+  - `agent_end` — send last messages to Mem0 for extraction (auto-capture)
+- **Optional tools** (call TalentOS API):
+  - `talentos_add_candidate`, `talentos_log_interaction`, `talentos_track_promise`
+  - `talentos_shortlist_candidates`, `talentos_candidate_timeline`, `talentos_followups_due`
+  - `talentos_referrer_network`, `talentos_pipeline_health`, `talentos_concern_patterns`
 
-These tools call the TalentOS API so OpenClaw agents can run structured hiring
-workflows while Mem0 handles persistence and recall.
+Setup: [docs/OPENCLAW_SETUP.md](./docs/OPENCLAW_SETUP.md). Multi-channel (e.g. Telegram + Web UI): [docs/MULTI_CHANNEL.md](./docs/MULTI_CHANNEL.md).
 
-## Notes
+## Scripts
 
-- Built for clean extensibility and open-source collaboration.
-- Current v1 scope is hiring workflows; same architecture can later support
-  SalesOps, SupportOps, and InvestorOps memory workflows.
+- **Smoke test** — full write/read flow (candidates, interactions, promises, timeline, shortlist, followups):
+  ```bash
+  npm run smoke
+  ```
+- **Multi-session demo** — Phase 1: seed data; Phase 2: “who are we hiring?” style queries (shortlist, pipeline health, referrer network, concern patterns). Optional: restart gateway between phases to prove persistence.
+  ```bash
+  npm run demo:multi-session
+  ```
+  Run only Phase 2: `npx tsx scripts/demo-multi-session.ts --phase2-only`
 
-## Smoke test harness
+## Docs
 
-With server running, execute an end-to-end hiring scenario:
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — system design, hooks, memory flow
+- [docs/OPENCLAW_SETUP.md](./docs/OPENCLAW_SETUP.md) — plugin install and agent config
+- [docs/MULTI_CHANNEL.md](./docs/MULTI_CHANNEL.md) — same memory across Telegram and Web UI
+- [docs/MEMORY_SCHEMA.md](./docs/MEMORY_SCHEMA.md) — memory entity types and metadata
 
-```bash
-npm run smoke
-```
+## License
 
-This validates candidate creation, interaction logging, promise tracking,
-timeline retrieval, shortlist query, and due followups.
+ISC. Built for OpenClaw × Mem0; extensible to other memory-driven workflows (e.g. SalesOps, SupportOps).

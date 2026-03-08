@@ -2,9 +2,12 @@ import type { RuntimeConfig } from "../config/env.js";
 import {
   type CandidateInput,
   type CandidateTimelineQuery,
+  type ConcernPatternsQuery,
   type FollowupQuery,
   type InteractionInput,
+  type PipelineHealthQuery,
   type PromiseInput,
+  type ReferrerNetworkQuery,
   type ShortlistQuery
 } from "../domain/schemas.js";
 import { slugify, toIsoDate } from "../domain/utils.js";
@@ -236,6 +239,69 @@ export class TalentMemoryService {
     });
 
     return memories;
+  }
+
+  /** Cross-conversation: candidates referred by a specific person */
+  async getReferrerNetwork(payload: ReferrerNetworkQuery): Promise<Mem0SearchMemory[]> {
+    const queryParts = [`candidates referred by ${payload.referrerName}`];
+    if (payload.roleTitle) {
+      queryParts.push(`for role ${payload.roleTitle}`);
+    }
+
+    const { memories } = await this.mem0.searchMemories({
+      query: queryParts.join(". "),
+      filters: { user_id: this.config.TALENTOS_USER_ID },
+      top_k: payload.topK,
+      rerank: true,
+      threshold: 0.2,
+      version: MEMORY_VERSION
+    });
+
+    return this.dedupeCandidateMemories(memories);
+  }
+
+  /** Cross-conversation: pipeline summary by role (candidates and stages) */
+  async getPipelineHealth(payload: PipelineHealthQuery): Promise<{
+    summary: { totalCandidates: number; memories: number };
+    memories: Mem0SearchMemory[];
+  }> {
+    const query = `candidates and their current stage for role ${payload.roleTitle}, pipeline status`;
+    const { memories } = await this.mem0.searchMemories({
+      query,
+      filters: { user_id: this.config.TALENTOS_USER_ID },
+      top_k: payload.topK,
+      rerank: true,
+      threshold: 0.2,
+      version: MEMORY_VERSION
+    });
+
+    const deduped = this.dedupeCandidateMemories(memories);
+    return {
+      summary: { totalCandidates: deduped.length, memories: memories.length },
+      memories: deduped
+    };
+  }
+
+  /** Cross-conversation: candidates who expressed concerns matching a topic */
+  async getConcernPatterns(payload: ConcernPatternsQuery): Promise<Mem0SearchMemory[]> {
+    const queryParts = [
+      `candidates who expressed concerns about ${payload.concernTopic}`,
+      "interview feedback, concerns, or reservations"
+    ];
+    if (payload.roleTitle) {
+      queryParts.push(`for role ${payload.roleTitle}`);
+    }
+
+    const { memories } = await this.mem0.searchMemories({
+      query: queryParts.join(". "),
+      filters: { user_id: this.config.TALENTOS_USER_ID },
+      top_k: payload.topK,
+      rerank: true,
+      threshold: 0.2,
+      version: MEMORY_VERSION
+    });
+
+    return this.dedupeCandidateMemories(memories);
   }
 
   private dedupeCandidateMemories(memories: Mem0SearchMemory[]): Mem0SearchMemory[] {

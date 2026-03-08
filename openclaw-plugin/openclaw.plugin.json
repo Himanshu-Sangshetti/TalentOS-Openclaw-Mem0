@@ -1,8 +1,8 @@
 {
   "id": "talentos-hiring",
   "name": "TalentOS Hiring Copilot",
-  "description": "OpenClaw plugin tools for a memory-native hiring workflow powered by Mem0.",
-  "version": "0.1.0",
+  "description": "Memory-native hiring copilot for OpenClaw with auto-recall, auto-capture, and structured hiring workflows powered by Mem0.",
+  "version": "0.2.0",
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
@@ -14,6 +14,38 @@
       "apiKey": {
         "type": "string",
         "description": "Optional API key for TalentOS API."
+      },
+      "mem0ApiKey": {
+        "type": "string",
+        "description": "Mem0 API key for auto-recall and auto-capture hooks."
+      },
+      "mem0BaseUrl": {
+        "type": "string",
+        "description": "Mem0 API base URL."
+      },
+      "userId": {
+        "type": "string",
+        "description": "Mem0 user ID for memory scoping."
+      },
+      "autoRecall": {
+        "type": "boolean",
+        "description": "Inject relevant hiring memories before every agent turn."
+      },
+      "autoCapture": {
+        "type": "boolean",
+        "description": "Extract and store hiring facts after every agent turn."
+      },
+      "maxRecallResults": {
+        "type": "number",
+        "description": "Max memories injected per turn."
+      },
+      "recallThreshold": {
+        "type": "number",
+        "description": "Min relevance score for auto-recall (0-1)."
+      },
+      "minPromptLength": {
+        "type": "number",
+        "description": "Skip auto-recall for prompts shorter than this."
       }
     },
     "required": ["baseUrl"]
@@ -26,6 +58,18 @@
     "apiKey": {
       "label": "TalentOS API Key",
       "sensitive": true
+    },
+    "mem0ApiKey": {
+      "label": "Mem0 API Key",
+      "sensitive": true
+    },
+    "mem0BaseUrl": {
+      "label": "Mem0 API URL",
+      "placeholder": "https://api.mem0.ai"
+    },
+    "userId": {
+      "label": "Mem0 User ID",
+      "placeholder": "talentos-default"
     }
   }
 }

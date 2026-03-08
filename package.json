@@ -9,7 +9,8 @@
     "start": "node dist/app.js",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "smoke": "tsx scripts/smoke.ts"
+    "smoke": "tsx scripts/smoke.ts",
+    "demo:multi-session": "tsx scripts/demo-multi-session.ts"
   },
   "keywords": [],
   "author": "TalentOS contributors",
