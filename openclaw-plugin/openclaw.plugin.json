@@ -1,0 +1,31 @@
+{
+  "id": "talentos-hiring",
+  "name": "TalentOS Hiring Copilot",
+  "description": "OpenClaw plugin tools for a memory-native hiring workflow powered by Mem0.",
+  "version": "0.1.0",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "baseUrl": {
+        "type": "string",
+        "description": "TalentOS API base URL."
+      },
+      "apiKey": {
+        "type": "string",
+        "description": "Optional API key for TalentOS API."
+      }
+    },
+    "required": ["baseUrl"]
+  },
+  "uiHints": {
+    "baseUrl": {
+      "label": "TalentOS API URL",
+      "placeholder": "http://127.0.0.1:3010"
+    },
+    "apiKey": {
+      "label": "TalentOS API Key",
+      "sensitive": true
+    }
+  }
+}
