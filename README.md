@@ -43,6 +43,7 @@ Copy `.env.example` to `.env` and fill values:
 
 - `MEM0_API_KEY` from Mem0 dashboard
 - optional custom IDs (`TALENTOS_USER_ID`, etc.)
+- optional service auth (`TALENTOS_API_KEY`) if you want API-level bearer protection
 
 ### 3) Start server
 
@@ -67,6 +68,12 @@ Base: `/api/v1/talent`
 - `POST /query/timeline`
 - `POST /query/followups`
 
+If `TALENTOS_API_KEY` is configured, add:
+
+```bash
+Authorization: Bearer <TALENTOS_API_KEY>
+```
+
 ### Example: add candidate
 
 ```bash
@@ -90,6 +97,9 @@ This repo includes `openclaw-plugin/` with:
 - optional tools:
   - `talentos_add_candidate`
   - `talentos_log_interaction`
+  - `talentos_track_promise`
+  - `talentos_shortlist_candidates`
+  - `talentos_candidate_timeline`
   - `talentos_followups_due`
 
 These tools call the TalentOS API so OpenClaw agents can run structured hiring
@@ -100,3 +110,14 @@ workflows while Mem0 handles persistence and recall.
 - Built for clean extensibility and open-source collaboration.
 - Current v1 scope is hiring workflows; same architecture can later support
   SalesOps, SupportOps, and InvestorOps memory workflows.
+
+## Smoke test harness
+
+With server running, execute an end-to-end hiring scenario:
+
+```bash
+npm run smoke
+```
+
+This validates candidate creation, interaction logging, promise tracking,
+timeline retrieval, shortlist query, and due followups.

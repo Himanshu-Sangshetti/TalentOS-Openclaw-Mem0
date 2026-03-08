@@ -7,9 +7,10 @@ import {
   type PromiseInput,
   type ShortlistQuery
 } from "../domain/schemas.js";
-import { isInDateRange, slugify, toIsoDate } from "../domain/utils.js";
-import { Mem0Client } from "../mem0/client.js";
+import { slugify, toIsoDate } from "../domain/utils.js";
+import { Mem0Client, Mem0HttpError } from "../mem0/client.js";
 import type { Mem0SearchMemory } from "../mem0/types.js";
+import type { Mem0AddRequest } from "../mem0/types.js";
 
 const MEMORY_VERSION = "v2" as const;
 
@@ -21,7 +22,10 @@ export class TalentMemoryService {
     this.config = config;
     this.mem0 = new Mem0Client({
       apiKey: config.MEM0_API_KEY,
-      baseUrl: config.MEM0_BASE_URL
+      baseUrl: config.MEM0_BASE_URL,
+      timeoutMs: config.MEM0_TIMEOUT_MS,
+      maxRetries: config.MEM0_MAX_RETRIES,
+      retryDelayMs: config.MEM0_RETRY_DELAY_MS
     });
   }
 
@@ -41,7 +45,7 @@ export class TalentMemoryService {
       .filter(Boolean)
       .join(" ");
 
-    const events = await this.mem0.addMemories({
+    const events = await this.addMemoriesWithGraphFallback({
       user_id: this.config.TALENTOS_USER_ID,
       agent_id: this.config.TALENTOS_AGENT_ID,
       app_id: this.config.TALENTOS_APP_ID,
@@ -53,6 +57,7 @@ export class TalentMemoryService {
         candidate_email: payload.email ?? null,
         candidate_phone: payload.phone ?? null,
         role_title: payload.roleTitle,
+        current_stage: payload.currentStage ?? null,
         referrer_name: payload.referrerName ?? null,
         source_channel: payload.sourceChannel,
         skills: payload.skills,
@@ -83,7 +88,7 @@ export class TalentMemoryService {
       .filter(Boolean)
       .join(" ");
 
-    const events = await this.mem0.addMemories({
+    const interactionEvents = await this.addMemoriesWithGraphFallback({
       user_id: this.config.TALENTOS_USER_ID,
       agent_id: this.config.TALENTOS_AGENT_ID,
       app_id: this.config.TALENTOS_APP_ID,
@@ -106,7 +111,32 @@ export class TalentMemoryService {
       enable_graph: this.config.MEM0_ENABLE_GRAPH
     });
 
-    return { candidateId, events: events.length };
+    const stageSnapshotEvents = await this.addMemoriesWithGraphFallback({
+      user_id: this.config.TALENTOS_USER_ID,
+      agent_id: this.config.TALENTOS_AGENT_ID,
+      app_id: this.config.TALENTOS_APP_ID,
+      messages: [
+        {
+          role: "user",
+          content: `Candidate ${payload.candidateName} currently at ${payload.stage} stage for ${payload.roleTitle}.`
+        }
+      ],
+      metadata: {
+        entity_type: "candidate",
+        candidate_id: candidateId,
+        candidate_name: payload.candidateName,
+        role_title: payload.roleTitle,
+        current_stage: payload.stage,
+        source_channel: payload.sourceChannel,
+        interaction_at: interactionAt
+      },
+      infer: true,
+      async_mode: false,
+      version: MEMORY_VERSION,
+      enable_graph: this.config.MEM0_ENABLE_GRAPH
+    });
+
+    return { candidateId, events: interactionEvents.length + stageSnapshotEvents.length };
   }
 
   async trackPromise(payload: PromiseInput): Promise<{ candidateId: string; events: number }> {
@@ -120,7 +150,7 @@ export class TalentMemoryService {
       `Status: ${payload.status}.`
     ].join(" ");
 
-    const events = await this.mem0.addMemories({
+    const events = await this.addMemoriesWithGraphFallback({
       user_id: this.config.TALENTOS_USER_ID,
       agent_id: this.config.TALENTOS_AGENT_ID,
       app_id: this.config.TALENTOS_APP_ID,
@@ -145,52 +175,35 @@ export class TalentMemoryService {
   }
 
   async shortlistCandidates(payload: ShortlistQuery): Promise<Mem0SearchMemory[]> {
-    const filters: Record<string, unknown> = {
-      AND: [
-        { user_id: this.config.TALENTOS_USER_ID },
-        { entity_type: "candidate" },
-        { role_title: payload.roleTitle }
-      ]
-    };
-
+    const queryParts = [`candidates for ${payload.roleTitle}`];
     if (payload.requiredSkills.length > 0) {
-      filters.AND = [
-        ...(filters.AND as unknown[]),
-        {
-          OR: payload.requiredSkills.map((skill) => ({
-            skills: { icontains: skill }
-          }))
-        }
-      ];
+      queryParts.push(`skills: ${payload.requiredSkills.join(", ")}`);
+    }
+    if (payload.stageIn.length > 0) {
+      queryParts.push(`at stage: ${payload.stageIn.join(" or ")}`);
     }
 
     const { memories } = await this.mem0.searchMemories({
-      query: payload.query,
-      filters,
+      query: queryParts.join(". "),
+      filters: { user_id: this.config.TALENTOS_USER_ID },
       top_k: payload.topK,
       rerank: true,
       threshold: 0.2,
       version: MEMORY_VERSION
     });
 
-    return memories;
+    return this.dedupeCandidateMemories(memories);
   }
 
   async getCandidateTimeline(payload: CandidateTimelineQuery): Promise<Mem0SearchMemory[]> {
-    const filters: Record<string, unknown> = {
-      AND: [
-        { user_id: this.config.TALENTOS_USER_ID },
-        { candidate_name: payload.candidateName }
-      ]
-    };
-
+    const queryParts = [`all interactions and details for ${payload.candidateName}`];
     if (payload.roleTitle) {
-      (filters.AND as Record<string, string>[]).push({ role_title: payload.roleTitle });
+      queryParts.push(`role: ${payload.roleTitle}`);
     }
 
     const { memories } = await this.mem0.searchMemories({
-      query: `timeline for ${payload.candidateName}`,
-      filters,
+      query: queryParts.join(". "),
+      filters: { user_id: this.config.TALENTOS_USER_ID },
       top_k: payload.topK,
       rerank: true,
       threshold: 0.0,
@@ -205,27 +218,69 @@ export class TalentMemoryService {
   }
 
   async getFollowups(payload: FollowupQuery): Promise<Mem0SearchMemory[]> {
+    const queryParts = ["open commitments, promises, and follow-ups with due dates"];
+    if (payload.fromDate) {
+      queryParts.push(`after ${payload.fromDate}`);
+    }
+    if (payload.toDate) {
+      queryParts.push(`before ${payload.toDate}`);
+    }
+
     const { memories } = await this.mem0.searchMemories({
-      query: "open followups and commitments",
-      filters: {
-        AND: [
-          { user_id: this.config.TALENTOS_USER_ID },
-          { entity_type: "promise" },
-          { promise_status: "open" }
-        ]
-      },
+      query: queryParts.join(". "),
+      filters: { user_id: this.config.TALENTOS_USER_ID },
       top_k: payload.topK,
       rerank: true,
       threshold: 0.0,
       version: MEMORY_VERSION
     });
 
-    const fromDate = payload.fromDate;
-    const toDate = payload.toDate;
-    return memories.filter((memory) => {
+    return memories;
+  }
+
+  private dedupeCandidateMemories(memories: Mem0SearchMemory[]): Mem0SearchMemory[] {
+    const byCandidate = new Map<string, Mem0SearchMemory>();
+    for (const memory of memories) {
       const metadata = memory.metadata ?? {};
-      const dueDate = typeof metadata.due_date === "string" ? metadata.due_date : undefined;
-      return dueDate ? isInDateRange(dueDate, fromDate, toDate) : false;
-    });
+      const candidateId = this.readString(metadata.candidate_id) ?? memory.id;
+      const existing = byCandidate.get(candidateId);
+      if (!existing) {
+        byCandidate.set(candidateId, memory);
+        continue;
+      }
+
+      const existingTime = new Date(existing.created_at ?? 0).getTime();
+      const nextTime = new Date(memory.created_at ?? 0).getTime();
+      if (nextTime > existingTime) {
+        byCandidate.set(candidateId, memory);
+      }
+    }
+    return [...byCandidate.values()];
+  }
+
+  private readString(value: unknown): string | undefined {
+    return typeof value === "string" && value.trim().length > 0 ? value : undefined;
+  }
+
+  private async addMemoriesWithGraphFallback(payload: Mem0AddRequest) {
+    try {
+      return await this.mem0.addMemories(payload);
+    } catch (error) {
+      if (!payload.enable_graph || !this.isGraphPlanRestriction(error)) {
+        throw error;
+      }
+
+      // Fall back to regular memory write when graph memory is unavailable for current plan.
+      const fallbackPayload: Mem0AddRequest = { ...payload, enable_graph: false };
+      return this.mem0.addMemories(fallbackPayload);
+    }
+  }
+
+  private isGraphPlanRestriction(error: unknown): boolean {
+    if (!(error instanceof Mem0HttpError)) {
+      return false;
+    }
+    const body = error.responseBody.toLowerCase();
+    return body.includes("graph memories feature is not available");
   }
 }

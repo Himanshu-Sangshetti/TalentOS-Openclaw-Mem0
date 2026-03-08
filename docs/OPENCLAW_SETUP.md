@@ -27,6 +27,7 @@ cp -r openclaw-plugin/* ~/.openclaw/extensions/talentos-hiring/
         enabled: true,
         config: {
           baseUrl: "http://127.0.0.1:3010"
+          // apiKey: "optional-if-TALENTOS_API_KEY-is-enabled"
         }
       }
     }
@@ -46,6 +47,9 @@ cp -r openclaw-plugin/* ~/.openclaw/extensions/talentos-hiring/
           allow: [
             "talentos_add_candidate",
             "talentos_log_interaction",
+            "talentos_track_promise",
+            "talentos_shortlist_candidates",
+            "talentos_candidate_timeline",
             "talentos_followups_due",
             "group:memory"
           ]
@@ -68,6 +72,9 @@ In your hiring workspace `AGENTS.md`, include a policy like:
 
 - Always store candidate profile updates via `talentos_add_candidate`.
 - Always log interview round outcomes via `talentos_log_interaction`.
+- Always track explicit commitments via `talentos_track_promise`.
+- Use `talentos_shortlist_candidates` for role-level ranking questions.
+- Use `talentos_candidate_timeline` before giving status updates.
 - Before suggesting outreach plans, call `talentos_followups_due`.
 - Prefer memory-grounded answers; avoid unsupported assumptions.
 

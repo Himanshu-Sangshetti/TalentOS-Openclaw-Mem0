@@ -1,6 +1,17 @@
 import { z } from "zod";
 
 const nonEmpty = z.string().trim().min(1);
+export const HiringStageSchema = z.enum([
+  "sourced",
+  "screening",
+  "assignment",
+  "technical",
+  "onsite",
+  "decision",
+  "offer",
+  "hired",
+  "rejected"
+]);
 
 export const CandidateInputSchema = z.object({
   candidateId: nonEmpty.optional(),
@@ -12,6 +23,7 @@ export const CandidateInputSchema = z.object({
   seniority: nonEmpty.optional(),
   skills: z.array(nonEmpty).default([]),
   roleTitle: nonEmpty,
+  currentStage: HiringStageSchema.optional(),
   referrerName: nonEmpty.optional(),
   sourceChannel: nonEmpty.default("openclaw"),
   notes: nonEmpty.optional()
@@ -21,7 +33,7 @@ export const InteractionInputSchema = z.object({
   candidateId: nonEmpty.optional(),
   candidateName: nonEmpty,
   roleTitle: nonEmpty,
-  stage: nonEmpty,
+  stage: HiringStageSchema,
   summary: nonEmpty,
   concerns: z.array(nonEmpty).default([]),
   strengths: z.array(nonEmpty).default([]),
@@ -44,7 +56,7 @@ export const PromiseInputSchema = z.object({
 export const ShortlistQuerySchema = z.object({
   roleTitle: nonEmpty,
   query: nonEmpty.default("shortlist candidates"),
-  stageIn: z.array(nonEmpty).default([]),
+  stageIn: z.array(HiringStageSchema).default([]),
   requiredSkills: z.array(nonEmpty).default([]),
   topK: z.number().int().positive().max(50).default(10)
 });
@@ -67,3 +79,4 @@ export type PromiseInput = z.infer<typeof PromiseInputSchema>;
 export type ShortlistQuery = z.infer<typeof ShortlistQuerySchema>;
 export type CandidateTimelineQuery = z.infer<typeof CandidateTimelineQuerySchema>;
 export type FollowupQuery = z.infer<typeof FollowupQuerySchema>;
+export type HiringStage = z.infer<typeof HiringStageSchema>;

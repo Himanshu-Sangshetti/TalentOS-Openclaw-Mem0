@@ -12,6 +12,9 @@ const EnvSchema = z.object({
   TALENTOS_AGENT_ID: z.string().min(1).default("talentos-hiring-copilot"),
   TALENTOS_APP_ID: z.string().min(1).default("openclaw-talentos"),
   TALENTOS_API_KEY: z.string().optional(),
+  MEM0_TIMEOUT_MS: z.coerce.number().int().positive().default(12000),
+  MEM0_MAX_RETRIES: z.coerce.number().int().min(0).max(5).default(2),
+  MEM0_RETRY_DELAY_MS: z.coerce.number().int().positive().default(400),
   MEM0_ENABLE_GRAPH: z
     .string()
     .optional()

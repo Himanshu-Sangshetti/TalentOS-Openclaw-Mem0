@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { Router } from "express";
 import { ZodError } from "zod";
+import { Mem0HttpError } from "../mem0/client.js";
 import {
   CandidateInputSchema,
   CandidateTimelineQuerySchema,
@@ -78,6 +79,16 @@ export function createTalentRoutes(service: TalentMemoryService): Router {
     void next;
     if (error instanceof ZodError) {
       res.status(400).json({ ok: false, error: "ValidationError", details: error.issues });
+      return;
+    }
+
+    if (error instanceof Mem0HttpError) {
+      res.status(502).json({
+        ok: false,
+        error: "Mem0Error",
+        message: error.message,
+        details: error.responseBody
+      });
       return;
     }
 

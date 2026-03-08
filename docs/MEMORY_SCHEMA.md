@@ -22,6 +22,7 @@ All memories include:
 - `candidate_email`
 - `candidate_phone`
 - `role_title`
+- `current_stage`
 - `referrer_name`
 - `skills` (array)
 - `source_channel`
@@ -38,6 +39,18 @@ All memories include:
 - `concerns` (array)
 - `source_channel`
 - `interaction_at`
+
+Normalized stage values:
+
+- `sourced`
+- `screening`
+- `assignment`
+- `technical`
+- `onsite`
+- `decision`
+- `offer`
+- `hired`
+- `rejected`
 
 ### Promise
 

@@ -73,7 +73,20 @@ export default function register(api) {
         properties: {
           candidateName: { type: "string" },
           roleTitle: { type: "string" },
-          stage: { type: "string" },
+          stage: {
+            type: "string",
+            enum: [
+              "sourced",
+              "screening",
+              "assignment",
+              "technical",
+              "onsite",
+              "decision",
+              "offer",
+              "hired",
+              "rejected"
+            ]
+          },
           summary: { type: "string" },
           strengths: { type: "array", items: { type: "string" } },
           concerns: { type: "array", items: { type: "string" } },
@@ -84,6 +97,94 @@ export default function register(api) {
       },
       async execute(_id, params) {
         const data = await postJson(config, "/api/v1/talent/interactions", params);
+        return jsonResponse(data);
+      }
+    },
+    { optional: true }
+  );
+
+  api.registerTool(
+    {
+      name: "talentos_track_promise",
+      description: "Track a hiring commitment and due date for a candidate.",
+      parameters: {
+        type: "object",
+        additionalProperties: false,
+        required: ["candidateName", "roleTitle", "commitment", "dueDate"],
+        properties: {
+          candidateName: { type: "string" },
+          roleTitle: { type: "string" },
+          commitment: { type: "string" },
+          dueDate: { type: "string", description: "YYYY-MM-DD" },
+          owner: { type: "string" },
+          status: { type: "string", enum: ["open", "closed"] },
+          sourceChannel: { type: "string" }
+        }
+      },
+      async execute(_id, params) {
+        const data = await postJson(config, "/api/v1/talent/promises", params);
+        return jsonResponse(data);
+      }
+    },
+    { optional: true }
+  );
+
+  api.registerTool(
+    {
+      name: "talentos_candidate_timeline",
+      description: "Retrieve a candidate timeline with profile, interactions, and promises.",
+      parameters: {
+        type: "object",
+        additionalProperties: false,
+        required: ["candidateName"],
+        properties: {
+          candidateName: { type: "string" },
+          roleTitle: { type: "string" },
+          topK: { type: "number" }
+        }
+      },
+      async execute(_id, params) {
+        const data = await postJson(config, "/api/v1/talent/query/timeline", params);
+        return jsonResponse(data);
+      }
+    },
+    { optional: true }
+  );
+
+  api.registerTool(
+    {
+      name: "talentos_shortlist_candidates",
+      description: "Retrieve a role-specific shortlist from memory.",
+      parameters: {
+        type: "object",
+        additionalProperties: false,
+        required: ["roleTitle"],
+        properties: {
+          roleTitle: { type: "string" },
+          query: { type: "string" },
+          stageIn: {
+            type: "array",
+            items: {
+              type: "string",
+              enum: [
+                "sourced",
+                "screening",
+                "assignment",
+                "technical",
+                "onsite",
+                "decision",
+                "offer",
+                "hired",
+                "rejected"
+              ]
+            }
+          },
+          requiredSkills: { type: "array", items: { type: "string" } },
+          topK: { type: "number" }
+        }
+      },
+      async execute(_id, params) {
+        const data = await postJson(config, "/api/v1/talent/query/shortlist", params);
         return jsonResponse(data);
       }
     },

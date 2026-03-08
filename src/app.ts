@@ -8,6 +8,14 @@ const service = new TalentMemoryService(env);
 
 app.use(express.json({ limit: "1mb" }));
 
+app.get("/", (_req, res) => {
+  res.json({
+    ok: true,
+    service: "talentos-openclaw-mem0",
+    message: "TalentOS API is live. Use /health or /api/v1/talent/* endpoints."
+  });
+});
+
 app.get("/health", (_req, res) => {
   res.json({
     ok: true,
