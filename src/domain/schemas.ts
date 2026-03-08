@@ -1,6 +1,14 @@
 import { z } from "zod";
 
 const nonEmpty = z.string().trim().min(1);
+const optionalString = z
+  .string()
+  .optional()
+  .transform((v) => (v && v.trim().length > 0 ? v.trim() : undefined));
+const optionalEmail = z
+  .union([z.email(), z.literal("")])
+  .optional()
+  .transform((v) => (v && v.trim().length > 0 ? v.trim() : undefined));
 export const HiringStageSchema = z.enum([
   "sourced",
   "screening",
@@ -14,19 +22,19 @@ export const HiringStageSchema = z.enum([
 ]);
 
 export const CandidateInputSchema = z.object({
-  candidateId: nonEmpty.optional(),
+  candidateId: optionalString,
   name: nonEmpty,
-  email: z.email().optional(),
-  phone: nonEmpty.optional(),
-  currentCompany: nonEmpty.optional(),
-  location: nonEmpty.optional(),
-  seniority: nonEmpty.optional(),
+  email: optionalEmail,
+  phone: optionalString,
+  currentCompany: optionalString,
+  location: optionalString,
+  seniority: optionalString,
   skills: z.array(nonEmpty).default([]),
   roleTitle: nonEmpty,
   currentStage: HiringStageSchema.optional(),
-  referrerName: nonEmpty.optional(),
+  referrerName: optionalString,
   sourceChannel: nonEmpty.default("openclaw"),
-  notes: nonEmpty.optional()
+  notes: optionalString
 });
 
 export const InteractionInputSchema = z.object({

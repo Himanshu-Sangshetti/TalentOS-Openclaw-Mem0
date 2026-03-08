@@ -30,7 +30,11 @@ const postJson = async (config, path, body) => {
 };
 
 export default function register(api) {
-  const config = api.config ?? {};
+  const pluginConfig = api.config ?? {};
+  const config = {
+    baseUrl: pluginConfig.baseUrl ?? process.env.TALENTOS_BASE_URL ?? "http://127.0.0.1:3010",
+    apiKey: pluginConfig.apiKey ?? process.env.TALENTOS_API_KEY ?? undefined
+  };
 
   api.registerTool(
     {
