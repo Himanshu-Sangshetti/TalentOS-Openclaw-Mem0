@@ -108,6 +108,44 @@ export function createTalentRoutes(service: TalentMemoryService): Router {
     }
   });
 
+  // -------------------------------------------------------------------------
+  // Memory visibility (view / dashboard) — GET so browsers can open or fetch
+  // -------------------------------------------------------------------------
+  router.get("/view", async (req, res, next) => {
+    try {
+      const roleTitle = (req.query.roleTitle as string)?.trim() || "Staff Engineer";
+      const q = (req.query.q as string)?.trim() || "";
+      const topK = Math.min(Number(req.query.topK) || 20, 50);
+
+      const [pipeline, memories] = await Promise.all([
+        service.getPipelineHealth({ roleTitle, topK: 30 }),
+        service.getMemoryPreview(q, topK)
+      ]);
+
+      res.json({
+        ok: true,
+        data: {
+          pipeline: {
+            roleTitle,
+            summary: pipeline.summary,
+            candidates: pipeline.memories.slice(0, 15).map((m) => ({
+              memory: m.memory,
+              created_at: m.created_at
+            }))
+          },
+          memories: memories.map((m) => ({
+            id: m.id,
+            memory: m.memory,
+            score: m.score,
+            created_at: m.created_at
+          }))
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   router.use((error: unknown, _req: Request, res: Response, next: NextFunction) => {
     void next;
     if (error instanceof ZodError) {

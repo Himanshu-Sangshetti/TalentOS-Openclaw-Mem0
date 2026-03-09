@@ -1,4 +1,5 @@
 import express from "express";
+import path from "path";
 import { env } from "./config/env.js";
 import { createTalentRoutes } from "./routes/talentRoutes.js";
 import { TalentMemoryService } from "./services/talentMemoryService.js";
@@ -12,7 +13,7 @@ app.get("/", (_req, res) => {
   res.json({
     ok: true,
     service: "talentos-openclaw-mem0",
-    message: "TalentOS API is live. Use /health or /api/v1/talent/* endpoints."
+    message: "TalentOS API is live. Use /health, /view (dashboard), or /api/v1/talent/* endpoints."
   });
 });
 
@@ -22,6 +23,12 @@ app.get("/health", (_req, res) => {
     service: "talentos-openclaw-mem0",
     env: env.NODE_ENV
   });
+});
+
+// Memory visibility dashboard (no auth required to load page; API fetch may need Bearer if TALENTOS_API_KEY is set)
+app.get("/view", (_req, res) => {
+  const dashboardPath = path.join(process.cwd(), "public", "dashboard.html");
+  res.sendFile(dashboardPath);
 });
 
 app.use((req, res, next) => {

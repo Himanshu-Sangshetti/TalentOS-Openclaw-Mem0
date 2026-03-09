@@ -9,7 +9,6 @@ TalentOS is a **memory-native** hiring copilot: it uses **Mem0** for durable, se
 - **Cross-conversation intelligence** — Queries like “who was referred by Ankit?”, “pipeline health for Staff Engineer”, and “candidates who expressed concerns about startup risk” use semantic search over all hiring memory.
 - **Multi-channel** — Same memory across Telegram and Web UI (or any OpenClaw channel). Add a candidate in one, recall in another.
 
-For a full system overview, see **[ARCHITECTURE.md](./ARCHITECTURE.md)**.
 
 ## Features
 
@@ -40,7 +39,8 @@ Copy `.env.example` to `.env` and set:
 npm run dev
 ```
 
-Health check: `GET http://localhost:3010/health`
+Health check: `GET http://localhost:3010/health`  
+Memory view (dashboard): `GET http://localhost:3010/view`
 
 ## API
 
@@ -104,9 +104,19 @@ Setup: [docs/OPENCLAW_SETUP.md](./docs/OPENCLAW_SETUP.md). Multi-channel (e.g. T
   ```
   Run only Phase 2: `npx tsx scripts/demo-multi-session.ts --phase2-only`
 
+## Memory visible
+
+Open **http://localhost:3010/view** in a browser to see a minimal dashboard: pipeline summary and recent memories from Mem0 (same data the agent uses for recall). If the server uses `TALENTOS_API_KEY`, enter it in the dashboard once.
+
+## Automated workflows (OpenClaw)
+
+Beyond chat, OpenClaw can run the same agent from **webhooks** (e.g. ATS → add candidate) and **cron** (e.g. daily “due follow-ups” digest to Telegram). One memory store, multiple trigger types.
+
+- [docs/WEBHOOK_WORKFLOW.md](./docs/WEBHOOK_WORKFLOW.md) — event-driven: POST /hooks/agent
+- [docs/CRON_WORKFLOW.md](./docs/CRON_WORKFLOW.md) — scheduled: daily digest, reminders
+
 ## Docs
 
-- [ARCHITECTURE.md](./ARCHITECTURE.md) — system design, hooks, memory flow
 - [docs/OPENCLAW_SETUP.md](./docs/OPENCLAW_SETUP.md) — plugin install and agent config
 - [docs/MULTI_CHANNEL.md](./docs/MULTI_CHANNEL.md) — same memory across Telegram and Web UI
 - [docs/MEMORY_SCHEMA.md](./docs/MEMORY_SCHEMA.md) — memory entity types and metadata

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TalentOS — Memory view</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 1rem; max-width: 900px; margin-left: auto; margin-right: auto; color: #1a1a1a; background: #f8f9fa; }
+    h1 { font-size: 1.25rem; margin: 0 0 0.5rem; }
+    .sub { color: #666; font-size: 0.875rem; margin-bottom: 1rem; }
+    section { background: #fff; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    section h2 { font-size: 0.9375rem; margin: 0 0 0.75rem; color: #333; }
+    .auth { margin-bottom: 1rem; }
+    .auth input { padding: 0.35rem 0.5rem; width: 280px; border: 1px solid #ccc; border-radius: 4px; }
+    .auth label { font-size: 0.875rem; color: #666; margin-right: 0.5rem; }
+    .meta { font-size: 0.8125rem; color: #666; }
+    ul { margin: 0; padding-left: 1.25rem; }
+    li { margin-bottom: 0.5rem; }
+    .memory { font-size: 0.875rem; margin-bottom: 0.6rem; padding: 0.5rem; background: #f5f5f5; border-radius: 4px; }
+    .error { color: #c00; font-size: 0.875rem; }
+    .loading { color: #666; font-size: 0.875rem; }
+    button { padding: 0.4rem 0.75rem; border: 1px solid #333; border-radius: 4px; background: #fff; cursor: pointer; font-size: 0.875rem; }
+    button:hover { background: #f0f0f0; }
+  </style>
+</head>
+<body>
+  <h1>TalentOS — Memory view</h1>
+  <p class="sub">Pipeline summary and recent hiring memory (Mem0). Same data the agent uses for recall.</p>
+
+  <section class="auth">
+    <label for="apiKey">API key (optional, if server requires):</label>
+    <input type="password" id="apiKey" placeholder="Leave empty if not set" />
+    <button type="button" id="saveKey">Save</button>
+  </section>
+
+  <section>
+    <h2>Pipeline</h2>
+    <div id="pipeline">—</div>
+  </section>
+
+  <section>
+    <h2>Recent memories</h2>
+    <div id="memories">—</div>
+  </section>
+
+  <script>
+    const API_BASE = '';
+    const VIEW_URL = API_BASE + '/api/v1/talent/view';
+
+    function getStoredKey() {
+      try {
+        return sessionStorage.getItem('talentos_view_key') || '';
+      } catch {
+        return '';
+      }
+    }
+
+    function setStoredKey(key) {
+      try {
+        sessionStorage.setItem('talentos_view_key', key);
+      } catch (_) {}
+    }
+
+    const apiKeyInput = document.getElementById('apiKey');
+    const saveKeyBtn = document.getElementById('saveKey');
+    apiKeyInput.value = getStoredKey();
+    saveKeyBtn.addEventListener('click', () => {
+      setStoredKey(apiKeyInput.value.trim());
+      fetchView();
+    });
+
+    async function fetchView() {
+      const pipelineEl = document.getElementById('pipeline');
+      const memoriesEl = document.getElementById('memories');
+      pipelineEl.innerHTML = '<span class="loading">Loading…</span>';
+      memoriesEl.innerHTML = '';
+
+      const headers = { 'Content-Type': 'application/json' };
+      const key = (document.getElementById('apiKey').value || getStoredKey()).trim();
+      if (key) headers['Authorization'] = 'Bearer ' + key;
+
+      try {
+        const res = await fetch(VIEW_URL + '?roleTitle=Staff+Engineer&topK=20', { headers });
+        const data = await res.json();
+        if (!res.ok) {
+          pipelineEl.innerHTML = '<span class="error">' + (data.error || data.message || res.status) + '</span>';
+          memoriesEl.innerHTML = '';
+          return;
+        }
+        const d = data.data;
+        if (!d) {
+          pipelineEl.innerHTML = '<span class="error">Unexpected response</span>';
+          return;
+        }
+        const p = d.pipeline || {};
+        pipelineEl.innerHTML = '<p class="meta">Role: ' + (p.roleTitle || '—') + ' · Candidates in pipeline: ' + (p.summary?.totalCandidates ?? '—') + '</p>' +
+          (p.candidates?.length ? '<ul>' + p.candidates.slice(0, 8).map(function (c) {
+            return '<li class="memory">' + (c.memory || '').slice(0, 180) + (c.memory && c.memory.length > 180 ? '…' : '') + '</li>';
+          }).join('') + '</ul>' : '<p class="meta">No pipeline memories yet.</p>');
+        const mems = d.memories || [];
+        memoriesEl.innerHTML = mems.length ? mems.map(function (m) {
+          return '<div class="memory">' + (m.memory || '').slice(0, 300) + (m.memory && m.memory.length > 300 ? '…' : '') + '<br><span class="meta">' + (m.created_at || '') + '</span></div>';
+        }).join('') : '<p class="meta">No memories yet.</p>';
+      } catch (e) {
+        pipelineEl.innerHTML = '<span class="error">Request failed: ' + e.message + '</span>';
+      }
+    }
+
+    fetchView();
+  </script>
+</body>
+</html>

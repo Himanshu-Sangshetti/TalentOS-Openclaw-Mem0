@@ -304,6 +304,19 @@ export class TalentMemoryService {
     return this.dedupeCandidateMemories(memories);
   }
 
+  /** Generic search for memory visibility / dashboard (harness-level: any domain can expose this) */
+  async getMemoryPreview(query: string, topK: number): Promise<Mem0SearchMemory[]> {
+    const { memories } = await this.mem0.searchMemories({
+      query: query || "hiring candidates interactions promises pipeline",
+      filters: { user_id: this.config.TALENTOS_USER_ID },
+      top_k: Math.min(topK, 50),
+      rerank: true,
+      threshold: 0.0,
+      version: MEMORY_VERSION
+    });
+    return memories;
+  }
+
   private dedupeCandidateMemories(memories: Mem0SearchMemory[]): Mem0SearchMemory[] {
     const byCandidate = new Map<string, Mem0SearchMemory>();
     for (const memory of memories) {
