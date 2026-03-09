@@ -51,8 +51,7 @@ Screenshots are in `docs/screenshots/`. Some flows use two images to show the fu
 
 **Add candidate** — Add a candidate in chat → agent confirmation.
 
-![Add candidate (1)](docs/screenshots/add-candidate-1.png)
-![Add candidate (2)](docs/screenshots/add-candidate-2.png)
+![Add candidate](docs/screenshots/add-candidate.png)
 
 **Full pipeline** — "Who's in the pipeline for [role]?" → table of candidates.
 
@@ -66,15 +65,11 @@ Screenshots are in `docs/screenshots/`. Some flows use two images to show the fu
 
 **Follow-ups or daily brief** — "What follow-ups are due?" or "Give me the daily brief."
 
-![Brief (1)](docs/screenshots/brief-1.png)
-![Brief (2)](docs/screenshots/brief-2.png)
+![Brief](docs/screenshots/brief.png)
 
 **Memory dashboard** — http://localhost:3010/view
 
-![View (1)](docs/screenshots/view-1.png)
-![View (2)](docs/screenshots/view-2.png)
-
-If a use case only has one screenshot, keep the `-1` image and remove the `-2` line.
+![View](docs/screenshots/view.png)
 
 ---
 
