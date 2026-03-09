@@ -2,7 +2,9 @@
 
 **One place for your hiring pipeline.** Talk to the copilot in Telegram, WhatsApp, or the web—add candidates, log interviews, track follow-ups, get a daily brief, and send emails. Same memory everywhere.
 
-Built as an **OpenClaw plugin** with **Mem0**: structured hiring memory (candidates, interactions, promises), auto-recall and auto-capture, and 10 tools so the agent can query and update pipeline without a separate ATS.
+Built as an **OpenClaw plugin** with **Mem0**: structured hiring memory (candidates, interactions, promises), auto-recall and auto-capture, and 10 tools so the agent can run the pipeline without a separate ATS.
+
+> **Note:** This project does **not** use the official [OpenClaw × Mem0 plugin](https://docs.mem0.ai/integrations/openclaw) (`@mem0/openclaw-mem0`). It talks to the **Mem0 API directly** from the TalentOS plugin. Reason: maximum customization (structured hiring schema, 10 domain tools, custom recall/capture) so that all memory logic lives in this repo and using the official plugin would mean having very less code here to review!!
 
 ---
 
@@ -58,7 +60,7 @@ flowchart TB
 ## Quick start
 
 1. **Repo:** `npm install`. Copy `.env.example` → `.env`, set `MEM0_API_KEY` (for the optional dashboard).
-2. **OpenClaw:** Install the plugin into `~/.openclaw/extensions/talentos-hiring`, set `mem0ApiKey` and `userId` in config, allow the TalentOS tools, restart the gateway. → **[Setup](docs/SETUP.md)**
+2. **OpenClaw:** Install the TalentOS plugin into `~/.openclaw/extensions/talentos-hiring`, set `apiKey` (or `mem0ApiKey`) and `userId` in config, allow the TalentOS’ tools, restart the gateway. → **[Setup](docs/SETUP.md)**
 3. **Optional dashboard:** `npm run dev` → http://localhost:3010/view (read-only pipeline view).
 
 ---
