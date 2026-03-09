@@ -6,15 +6,52 @@ Built as an **OpenClaw plugin** with **Mem0**: structured hiring memory (candida
 
 ---
 
+## Architecture
+
+TalentOS runs inside OpenClaw as a plugin; **Mem0** is the single source of truth. All hiring flows (add candidate, log interaction, daily brief, etc.) go through the plugin; an optional view server provides a read-only dashboard from the same Mem0 data.
+
+```mermaid
+flowchart TB
+  subgraph entry["Entry points"]
+    Chat[Telegram / WhatsApp / Web]
+    Webhook[Webhook]
+    Cron[Cron]
+  end
+
+  subgraph openclaw["OpenClaw"]
+    Gateway[Gateway]
+    subgraph plugin["TalentOS Plugin"]
+      Hooks[Hooks: auto-recall + auto-capture]
+      Skill[Skill: SKILL.md]
+      Tools[10 tools]
+    end
+  end
+
+  Mem0[(Mem0)]
+  ViewServer[View server]
+  Dashboard[Dashboard /view]
+
+  entry --> Gateway
+  Gateway --> plugin
+  Hooks --> Mem0
+  Tools --> Mem0
+  ViewServer -->|read-only| Mem0
+  Dashboard --> ViewServer
+```
+
+→ **[Full architecture](docs/ARCHITECTURE.md)** — request flow, hooks, tools, memory schema, cron, webhook.
+
+---
+
 ## What you can do
 
-- **Add candidates** — Name, role, contact, referrer. Stored in Mem0, not lost in chat.
-- **Log interactions** — Screening notes, stage updates, strengths/concerns. Timeline per candidate.
-- **Track follow-ups** — “Schedule call with X tomorrow 3pm.” Surfaces in the daily brief and follow-ups list.
-- **Query pipeline** — “Who’s in the pipeline for Staff Engineer?” “Who did Ankit refer?” “Pipeline health?” “Any candidates who expressed concerns about compensation?”
-- **Daily brief** — Proactive summary: follow-ups due, at-risk candidates, pipeline snapshot. On demand or on a schedule (cron).
-- **Send email** — “Send [candidate] an email to schedule a call.” Uses Resend; one message, no copy-paste.
-- **Same memory, all channels** — Add in Telegram, ask in WhatsApp or from a webhook. One `user_id`, one pipeline.
+- **Add candidates**: Name, role, contact, referrer. Stored in Mem0, not lost in chat.
+- **Log interactions**: Screening notes, stage updates, strengths/concerns. Timeline per candidate.
+- **Track follow-ups**: “Schedule call with X tomorrow 3pm.” Surfaces in the daily brief and follow-ups list.
+- **Query pipeline**: “Who’s in the pipeline for Staff Engineer?” “Who did Ankit refer?” “Pipeline health?” “Any candidates who expressed concerns about compensation?”
+- **Daily brief**: Proactive summary: follow-ups due, at-risk candidates, pipeline snapshot. On demand or on a schedule (cron).
+- **Send email**: “Send [candidate] an email to schedule a call.” Uses Resend; one message, no copy-paste.
+- **Same memory, all channels**: Add in Telegram, ask in WhatsApp or from a webhook. One `user_id`, one pipeline.
 
 ---
 

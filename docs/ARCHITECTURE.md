@@ -1,16 +1,84 @@
 # Architecture
 
-## System
+## System overview
 
-```
-Chat / Webhook / Cron  →  OpenClaw gateway  →  TalentOS plugin (hooks + tools)  →  Mem0
-                                                      ↓
-Optional: view server (GET /view, /api/v1/talent/view)  →  Mem0 (read-only)
+TalentOS runs as an **OpenClaw plugin** that uses **Mem0** as the single source of truth for hiring memory. All write and read paths for hiring go through the plugin; an optional **view server** provides a read-only dashboard and API from the same Mem0 data.
+
+### High-level architecture
+
+```mermaid
+flowchart TB
+  subgraph entry["Entry points"]
+    Chat[Telegram / WhatsApp / Web chat]
+    Webhook[Webhook POST]
+    Cron[Scheduled cron]
+  end
+
+  subgraph openclaw["OpenClaw"]
+    Gateway[Gateway]
+    subgraph plugin["TalentOS Plugin"]
+      direction TB
+      Hooks["Lifecycle hooks"]
+      Skill["Skill (SKILL.md)"]
+      Tools["10 tools"]
+      Hooks --> Recall["before_prompt_build: auto-recall"]
+      Hooks --> Capture["agent_end: auto-capture"]
+    end
+  end
+
+  Mem0[(Mem0<br/>user_id scoped)]
+  ViewServer["View server (optional)"]
+  Dashboard["Dashboard /view"]
+
+  entry --> Gateway
+  Gateway --> plugin
+  Recall --> Mem0
+  Capture --> Mem0
+  Tools --> Mem0
+  ViewServer -->|"read-only"| Mem0
+  Dashboard --> ViewServer
 ```
 
-- One **hiring** agent; one Mem0 `user_id` (plugin config). Same memory for chat, webhook, cron.
-- **Plugin** does all hiring: skill, auto-recall, auto-capture, 10 tools. No separate TalentOS API.
-- **View server** is optional: dashboard + read-only API only.
+- **One agent, one memory:** A single Mem0 `user_id` (plugin config) is used for chat, webhook, and cron. Add a candidate in Telegram, query in WhatsApp or from the webhook — same pipeline.
+- **Plugin as the hiring brain:** The plugin owns all hiring behavior: skill instructions, auto-recall (inject relevant memories before each turn), auto-capture (store facts after each turn), and 10 tools that read/write Mem0. There is no separate TalentOS backend API.
+- **View server is optional:** Express app that serves the dashboard and `/api/v1/talent/view` by querying Mem0 read-only. No hiring POSTs; useful for visibility and debugging.
+
+### Request flow (user message to response)
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant Channel as Chat/Webhook/Cron
+  participant Gateway as OpenClaw Gateway
+  participant Plugin as TalentOS Plugin
+  participant Mem0
+
+  User->>Channel: Message
+  Channel->>Gateway: Request
+  Gateway->>Plugin: before_prompt_build
+  Plugin->>Mem0: search (user prompt)
+  Mem0-->>Plugin: top-k memories
+  Plugin-->>Gateway: prependContext (inject memories)
+  Gateway->>Gateway: Build prompt + LLM call
+  Gateway->>Plugin: Tool calls (e.g. add_candidate)
+  Plugin->>Mem0: add / search
+  Mem0-->>Plugin: result
+  Plugin-->>Gateway: tool result
+  Gateway->>Plugin: agent_end
+  Plugin->>Mem0: add (last N messages, extract facts)
+  Gateway-->>Channel: Response
+  Channel-->>User: Reply
+```
+
+### Component summary
+
+| Component | Role |
+|-----------|------|
+| **Entry points** | Telegram, WhatsApp, web chat; webhook (e.g. ATS/form); OpenClaw cron (e.g. daily brief). |
+| **OpenClaw gateway** | Routes messages to the hiring agent, runs LLM, invokes plugin hooks and tools. |
+| **TalentOS plugin** | Registers hooks (auto-recall, auto-capture), 10 tools (add candidate, log interaction, timeline, daily brief, etc.), and the hiring skill. All tools call Mem0 directly. |
+| **Mem0** | Stores and retrieves hiring memory (candidates, interactions, promises) with metadata; v2 search with filters and rerank. |
+| **View server** | Optional Express app: `GET /view` (dashboard), `GET /api/v1/talent/view` (JSON). Reads from Mem0 only; optional Bearer auth. |
 
 ---
 
@@ -90,7 +158,48 @@ One `userId` in plugin config ⇒ same memory across all channels using that age
 
 ## Memory schema (Mem0)
 
-Plugin stores hiring context with metadata. One `user_id` per config.
+Plugin stores hiring context with metadata. One `user_id` per config. All entities are stored as natural-language memories plus metadata so Mem0 can index and search them; tools use v2 search with filters.
+
+### Entity model
+
+```mermaid
+erDiagram
+  MEM0_USER ||--o{ CANDIDATE : "scoped by user_id"
+  MEM0_USER ||--o{ INTERACTION : "scoped by user_id"
+  MEM0_USER ||--o{ PROMISE : "scoped by user_id"
+  CANDIDATE ||--o{ INTERACTION : "candidate_id"
+  CANDIDATE ||--o{ PROMISE : "candidate_id"
+
+  CANDIDATE {
+    string candidate_id
+    string candidate_name
+    string role_title
+    string current_stage
+    string referrer_name
+    array skills
+    string source_channel
+  }
+
+  INTERACTION {
+    string candidate_id
+    string candidate_name
+    string role_title
+    string stage
+    string summary
+    array strengths
+    array concerns
+    string next_step
+  }
+
+  PROMISE {
+    string candidate_id
+    string candidate_name
+    string commitment
+    date due_date
+    string owner
+    string status
+  }
+```
 
 **Entity types:** `candidate` | `interaction` | `promise`.  
 **Stages:** `sourced`, `screening`, `assignment`, `technical`, `onsite`, `decision`, `offer`, `hired`, `rejected`.
@@ -99,4 +208,4 @@ Plugin stores hiring context with metadata. One `user_id` per config.
 **Interaction:** candidate_id, candidate_name, role_title, stage, summary, strengths, concerns, next_step.  
 **Promise:** candidate_id, candidate_name, commitment, due_date, owner, status (open|closed).
 
-Queries use Mem0 v2 search with filters (user_id, entity_type, role_title, etc.).
+Queries use Mem0 v2 search with filters (user_id, entity_type, role_title, etc.) and optional rerank.
