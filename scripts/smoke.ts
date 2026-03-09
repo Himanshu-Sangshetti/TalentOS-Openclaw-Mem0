@@ -1,3 +1,7 @@
+/**
+ * Smoke test for the view-only server (post-pivot).
+ * Hiring flows run in the OpenClaw plugin → Mem0; this server only serves /health and /view.
+ */
 import { config as loadEnv } from "dotenv";
 import { z } from "zod";
 
@@ -12,98 +16,45 @@ const env = schema.parse(process.env);
 const baseUrl = env.TALENTOS_BASE_URL.replace(/\/+$/, "");
 
 async function main(): Promise<void> {
-  const now = new Date();
-  const dueDate = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .slice(0, 10);
+  console.log("1) GET / ...");
+  const root = await get("/");
+  if (!root.ok) throw new Error(`GET / failed: ${JSON.stringify(root)}`);
+  console.log("   ", root.message ?? "ok");
 
-  const roleTitle = "Founding AI Engineer";
-  const candidateName = "Rohan Gupta";
+  console.log("2) GET /health ...");
+  const health = await get("/health");
+  if (!health.ok) throw new Error(`GET /health failed: ${JSON.stringify(health)}`);
+  console.log("   ", health.service, health.env);
 
-  console.log("1) Creating candidate...");
-  await post("/api/v1/talent/candidates", {
-    name: candidateName,
-    roleTitle,
-    currentCompany: "Stripe",
-    location: "Bangalore",
-    currentStage: "screening",
-    skills: ["python", "agents", "infra"],
-    referrerName: "Priya"
-  });
+  console.log("3) GET /api/v1/talent/view ...");
+  const view = await get("/api/v1/talent/view?roleTitle=Staff+Engineer&topK=10");
+  if (!view.ok) throw new Error(`GET /view failed: ${JSON.stringify(view)}`);
+  const d = view.data;
+  if (!d) throw new Error("Missing data in view response");
+  const total = d.pipeline?.summary?.totalCandidates ?? 0;
+  const memCount = Array.isArray(d.memories) ? d.memories.length : 0;
+  console.log(`   Pipeline candidates: ${total}, memories: ${memCount}`);
 
-  console.log("2) Logging interaction...");
-  await post("/api/v1/talent/interactions", {
-    candidateName,
-    roleTitle,
-    stage: "technical",
-    summary: "Strong systems design and memory architecture understanding.",
-    strengths: ["systems", "api design"],
-    concerns: ["startup risk"],
-    nextStep: "onsite"
-  });
-
-  console.log("3) Tracking promise...");
-  await post("/api/v1/talent/promises", {
-    candidateName,
-    roleTitle,
-    commitment: "Share onsite panel details.",
-    dueDate,
-    owner: "founder"
-  });
-
-  console.log("   Waiting 20s for Mem0 Cloud indexing...");
-  await sleep(20000);
-
-  console.log("4) Fetching timeline...");
-  const timeline = await post("/api/v1/talent/query/timeline", {
-    candidateName,
-    roleTitle
-  });
-  assertOk(timeline);
-  console.log(`Timeline memories: ${timeline.data.length}`);
-
-  console.log("5) Fetching shortlist...");
-  const shortlist = await post("/api/v1/talent/query/shortlist", {
-    roleTitle,
-    stageIn: ["screening", "technical", "onsite"],
-    requiredSkills: ["python", "infra"]
-  });
-  assertOk(shortlist);
-  console.log(`Shortlist memories: ${shortlist.data.length}`);
-
-  console.log("6) Fetching followups...");
-  const followups = await post("/api/v1/talent/query/followups", {
-    fromDate: now.toISOString().slice(0, 10),
-    toDate: dueDate
-  });
-  assertOk(followups);
-  console.log(`Followups due: ${followups.data.length}`);
-
-  console.log("Smoke test passed.");
+  console.log("Smoke test passed (view-only server).");
 }
 
 type ApiEnvelope = {
   ok: boolean;
   data?: unknown;
-  error?: string;
   message?: string;
+  service?: string;
+  env?: string;
+  error?: string;
 };
 
-async function post(path: string, body: Record<string, unknown>): Promise<ApiEnvelope> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json"
-  };
+async function get(path: string): Promise<ApiEnvelope> {
+  const headers: Record<string, string> = { Accept: "application/json" };
   if (env.TALENTOS_API_KEY) {
     headers.Authorization = `Bearer ${env.TALENTOS_API_KEY}`;
   }
 
-  const response = await fetch(`${baseUrl}${path}`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body)
-  });
+  const response = await fetch(`${baseUrl}${path}`, { method: "GET", headers });
   const text = await response.text();
-
   const payload = parseJson<ApiEnvelope>(text);
   if (!response.ok) {
     throw new Error(`Request failed (${response.status}) ${path}: ${text}`);
@@ -117,16 +68,6 @@ function parseJson<T>(raw: string): T {
   } catch (error) {
     throw new Error(`Invalid JSON response: ${raw}`, { cause: error });
   }
-}
-
-function assertOk(payload: ApiEnvelope): void {
-  if (!payload.ok) {
-    throw new Error(payload.message ?? payload.error ?? "Unknown API error");
-  }
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 main().catch((error) => {

@@ -3,17 +3,18 @@
   "name": "TalentOS Hiring Copilot",
   "description": "Memory-native hiring copilot for OpenClaw with auto-recall, auto-capture, and structured hiring workflows powered by Mem0.",
   "version": "0.2.0",
+  "skills": ["skills"],
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
     "properties": {
       "baseUrl": {
         "type": "string",
-        "description": "TalentOS API base URL."
+        "description": "Optional: view server URL (for future use). Hiring uses Mem0 only."
       },
       "apiKey": {
         "type": "string",
-        "description": "Optional API key for TalentOS API."
+        "description": "Optional: view server API key if used."
       },
       "mem0ApiKey": {
         "type": "string",
@@ -48,11 +49,11 @@
         "description": "Skip auto-recall for prompts shorter than this."
       }
     },
-    "required": ["baseUrl"]
+    "required": ["mem0ApiKey"]
   },
   "uiHints": {
     "baseUrl": {
-      "label": "TalentOS API URL",
+      "label": "View server URL (optional)",
       "placeholder": "http://127.0.0.1:3010"
     },
     "apiKey": {

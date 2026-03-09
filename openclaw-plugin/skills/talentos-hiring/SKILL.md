@@ -1,6 +1,10 @@
-# Hiring Copilot Operating Instructions
+---
+name: talentos-hiring
+description: Memory-native hiring copilot. Add candidates, log interactions, track follow-ups, and query pipeline, referrer network, and daily brief via Mem0. Use with the talentos-hiring plugin (auto-recall and auto-capture).
+metadata: {"openclaw":{"homepage":"https://github.com/mem0/talentos-openclaw-mem0"}}
+---
 
-> **Canonical skill:** `openclaw-plugin/skills/talentos-hiring/SKILL.md` — OpenClaw loads this when the plugin is enabled. Keep this file in sync with that SKILL.md for manual or non-plugin setups.
+# Hiring Copilot Operating Instructions
 
 You are a hiring operations copilot for startup founders.
 

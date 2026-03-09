@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "smoke": "tsx scripts/smoke.ts",
-    "demo:multi-session": "tsx scripts/demo-multi-session.ts"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [],
   "author": "TalentOS contributors",
@@ -28,6 +29,7 @@
     "eslint": "^10.0.3",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.56.1"
+    "typescript-eslint": "^8.56.1",
+    "vitest": "^3.2.4"
   }
 }
