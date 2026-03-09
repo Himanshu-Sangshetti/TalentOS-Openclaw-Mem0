@@ -28,7 +28,7 @@ async function main(): Promise<void> {
 
   console.log("3) GET /api/v1/talent/view ...");
   const view = await get("/api/v1/talent/view?roleTitle=Staff+Engineer&topK=10");
-  if (!view.ok) throw new Error(`GET /view failed: ${JSON.stringify(view)}`);
+  if (!view.ok) throw new Error(`GET /api/v1/talent/view failed: ${JSON.stringify(view)}`);
   const d = view.data;
   if (!d) throw new Error("Missing data in view response");
   const total = d.pipeline?.summary?.totalCandidates ?? 0;

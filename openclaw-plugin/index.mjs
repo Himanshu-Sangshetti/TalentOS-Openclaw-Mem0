@@ -15,7 +15,8 @@ function resolveConfig(api) {
       }
     : () => {};
   return {
-    baseUrl: pluginConfig.baseUrl ?? process.env.TALENTOS_BASE_URL ?? "http://127.0.0.1:3010",
+    // Do not set baseUrl: OpenClaw sends tool invocations there. Our tools run in-process (Mem0 only). View server is read-only.
+    baseUrl: pluginConfig.baseUrl ?? process.env.TALENTOS_BASE_URL ?? undefined,
     apiKey: pluginConfig.apiKey ?? process.env.TALENTOS_API_KEY ?? undefined,
     mem0ApiKey: pluginConfig.mem0ApiKey ?? process.env.MEM0_API_KEY ?? undefined,
     mem0BaseUrl: pluginConfig.mem0BaseUrl ?? process.env.MEM0_BASE_URL ?? MEM0_API_BASE,
@@ -25,6 +26,8 @@ function resolveConfig(api) {
     maxRecallResults: pluginConfig.maxRecallResults ?? 5,
     recallThreshold: pluginConfig.recallThreshold ?? 0.3,
     minPromptLength: pluginConfig.minPromptLength ?? 15,
+    resendApiKey: pluginConfig.resendApiKey ?? process.env.RESEND_API_KEY ?? undefined,
+    resendFrom: pluginConfig.resendFrom ?? process.env.RESEND_FROM ?? undefined,
     log
   };
 }
@@ -415,6 +418,33 @@ async function toolDailyBrief(config, params) {
   };
 }
 
+// ---------- Email: Resend API (optional) ----------
+async function sendEmailResend(config, params) {
+  const { to, subject, body, isHtml } = params;
+  if (!config.resendApiKey || !config.resendFrom) {
+    throw new Error("Email not configured: set resendApiKey and resendFrom in plugin config or RESEND_API_KEY and RESEND_FROM env.");
+  }
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${config.resendApiKey}`
+    },
+    body: JSON.stringify({
+      from: config.resendFrom,
+      to: [to],
+      subject,
+      ...(isHtml ? { html: body } : { text: body })
+    })
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Resend API error (${res.status}): ${text}`);
+  }
+  const data = await res.json().catch(() => ({}));
+  return { id: data.id, to, subject, sent: true };
+}
+
 // ---------------------------------------------------------------------------
 // Plugin registration
 // ---------------------------------------------------------------------------
@@ -704,6 +734,40 @@ export default function register(api) {
       async execute(_id, params) {
         const data = await toolDailyBrief(config, params ?? {});
         return jsonResponse(data);
+      }
+    },
+    { optional: true }
+  );
+
+  api.registerTool(
+    {
+      name: "talentos_send_email",
+      description: "Send an email via Resend. Use when the user asks to send or email a candidate/contact. Requires plugin config: resendApiKey and resendFrom (or RESEND_API_KEY and RESEND_FROM env).",
+      parameters: {
+        type: "object",
+        additionalProperties: false,
+        required: ["to", "subject", "body"],
+        properties: {
+          to: { type: "string", description: "Recipient email address" },
+          subject: { type: "string", description: "Email subject" },
+          body: { type: "string", description: "Plain text or HTML body" },
+          isHtml: { type: "boolean", description: "If true, body is HTML (default false)" }
+        }
+      },
+      async execute(_id, params) {
+        try {
+          const data = await sendEmailResend(config, {
+            to: params.to,
+            subject: params.subject,
+            body: params.body,
+            isHtml: params.isHtml === true
+          });
+          return jsonResponse(data);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          config.log("warn", "TalentOS send_email failed", err);
+          return jsonResponse({ error: msg, sent: false });
+        }
       }
     },
     { optional: true }

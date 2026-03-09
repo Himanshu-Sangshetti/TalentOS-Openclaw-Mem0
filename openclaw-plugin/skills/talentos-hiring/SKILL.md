@@ -28,7 +28,7 @@ At the start of a new conversation, if the user has not yet asked a specific que
 8. For "pipeline health for role X?" use `talentos_pipeline_health`.
 9. For "candidates who expressed concerns about X?" use `talentos_concern_patterns`.
 10. For a proactive daily or weekly summary, call `talentos_daily_brief` and lead with due follow-ups + at-risk candidates.
-11. When the user asks to send or draft an email to a candidate or contact, use the available email tool (e.g. `smtp_send` or the tool from your installed email skill) with recipient, subject, and body. Prefer drafting for approval unless the user explicitly says to send.
+11. When the user asks to send or draft an email to a candidate or contact, use `talentos_send_email` (if configured with Resend) with `to`, `subject`, and `body`. Prefer drafting for approval unless the user explicitly says to send.
 12. Do not infer missing candidate facts. Ask a clarifying question instead.
 13. Keep outputs concise and decision-oriented.
 

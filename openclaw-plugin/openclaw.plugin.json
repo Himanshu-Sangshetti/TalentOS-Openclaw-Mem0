@@ -8,14 +8,6 @@
     "type": "object",
     "additionalProperties": false,
     "properties": {
-      "baseUrl": {
-        "type": "string",
-        "description": "Optional: view server URL (for future use). Hiring uses Mem0 only."
-      },
-      "apiKey": {
-        "type": "string",
-        "description": "Optional: view server API key if used."
-      },
       "mem0ApiKey": {
         "type": "string",
         "description": "Mem0 API key for auto-recall and auto-capture hooks."
@@ -47,19 +39,19 @@
       "minPromptLength": {
         "type": "number",
         "description": "Skip auto-recall for prompts shorter than this."
+      },
+      "resendApiKey": {
+        "type": "string",
+        "description": "Resend API key for talentos_send_email (optional). Or set RESEND_API_KEY env."
+      },
+      "resendFrom": {
+        "type": "string",
+        "description": "Sender email for Resend (e.g. onboarding@yourdomain.com). Or set RESEND_FROM env."
       }
     },
     "required": ["mem0ApiKey"]
   },
   "uiHints": {
-    "baseUrl": {
-      "label": "View server URL (optional)",
-      "placeholder": "http://127.0.0.1:3010"
-    },
-    "apiKey": {
-      "label": "TalentOS API Key",
-      "sensitive": true
-    },
     "mem0ApiKey": {
       "label": "Mem0 API Key",
       "sensitive": true
@@ -71,6 +63,14 @@
     "userId": {
       "label": "Mem0 User ID",
       "placeholder": "talentos-default"
+    },
+    "resendApiKey": {
+      "label": "Resend API Key (optional, for send email)",
+      "sensitive": true
+    },
+    "resendFrom": {
+      "label": "Resend From Email",
+      "placeholder": "hiring@yourdomain.com"
     }
   }
 }

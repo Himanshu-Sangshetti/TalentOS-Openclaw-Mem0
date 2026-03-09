@@ -45,12 +45,13 @@ Optional: view server (GET /view, /api/v1/talent/view)  →  Mem0 (read-only)
 | `talentos_pipeline_health` | Pipeline summary for a role. |
 | `talentos_concern_patterns` | Candidates who expressed concerns about a topic (optional: role). |
 | `talentos_daily_brief` | Proactive brief: follow-ups due + at-risk + pipeline (optional: role, lookahead/stale days). |
+| `talentos_send_email` | Send email via Resend (optional: requires `resendApiKey` and `resendFrom` config). |
 
 Stages (normalized): `sourced`, `screening`, `assignment`, `technical`, `onsite`, `decision`, `offer`, `hired`, `rejected`.
 
 ### Skill
 
-Plugin ships `skills/talentos-hiring/SKILL.md`. OpenClaw loads it when the plugin is enabled. It defines when to call which tool, proactive opener, compounding rules, and optional email (use installed email tool when user asks to send/draft).
+Plugin ships `skills/talentos-hiring/SKILL.md`. OpenClaw loads it when the plugin is enabled. It defines when to call which tool, proactive opener, compounding rules, and optional email: use `talentos_send_email` (Resend) when the user asks to send or draft email, if configured.
 
 ---
 
